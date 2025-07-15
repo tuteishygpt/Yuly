@@ -47,7 +47,7 @@ def get_text_from_update(update: Update) -> str | None:
     
     message_text = update.message.text
     
-    if message_text:
+    if message_text and message_text.startswith('/'):
         # For commands like /analyze text, text is after command
         parts = message_text.split(' ', 1)
         if len(parts) > 1 and parts[1].strip():
@@ -88,8 +88,8 @@ def get_text_from_update(update: Update) -> str | None:
 
 
 def identify_language(message_text: str) -> tuple[str | None, str | None]:
-    if not message_text:
-        logger.info("identify_language: No message text provided.")
+    if not message_text or len(message_text.strip()) < 3:
+        logger.info("identify_language: No message text provided or text too short for reliable detection.")
         return None, None
     try:
         lang_code = detect(message_text)
@@ -132,7 +132,8 @@ def detect_scam(message_text: str, api_key: str | None) -> str:
 
 
 def interpret_gemini_response(response_text: str) -> str:
-    valid_verdicts = ["Scam", "Likely Scam", "Safe", "Uncertain"]
+    # Check longer verdict phrases first when parsing partial matches
+    valid_verdicts = ["Likely Scam", "Scam", "Safe", "Uncertain"]
     if response_text.startswith("Error") or response_text == "Uncertain - API key missing" or response_text == "Uncertain - No text provided":
         logger.info(f"interpret_gemini_response: Returning '{response_text}' as is (error or missing input).")
         return "Uncertain (due to error or missing input)"

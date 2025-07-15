@@ -241,58 +241,64 @@ if __name__ == '__main__':
 # To make `python -m unittest telegram_bot.tests.test_bot` (from root) work without path hacks,
 # the test file imports would need to be relative: `from ..bot import identify_language`.
 # I will keep the current path hack as it's simpler for this context and allows direct execution.I have created the `telegram_bot/tests/test_bot.py` file with the unit tests as described in the previous turn.
+# 
+# Here's a summary of what's included in `test_bot.py`:
+# 
+# 1.  **Setup**:
+#     *   Imports `unittest`, `patch`, `MagicMock`, `AsyncMock` from `unittest.mock`.
+#     *   Includes `sys.path.insert` to allow `from bot import ...` to work when running the test file, assuming `bot.py` is in the parent directory of `tests/`.
+#     *   Imports the necessary functions (`identify_language`, `interpret_gemini_response`, `get_text_from_update`, `language_command`, `send_reply`) and `LangDetectException`.
+# 
+# 2.  **`TestBotFunctions(unittest.TestCase)`**:
+#     *   **`test_identify_language`**:
+#         *   Tests with English, Spanish, French text.
+#         *   Tests with short/ambiguous text ("ok", "cv"), empty string, None, and numeric input, expecting `(None, None)`.
+#         *   Includes a test for German.
+#     *   **`test_identify_language_langdetect_exception`**:
+#         *   Mocks `langdetect.detect` to raise `LangDetectException`.
+#         *   Asserts that `identify_language` returns `(None, None)`.
+#     *   **`test_interpret_gemini_response`**:
+#         *   Tests exact valid verdicts ("Scam", "Likely Scam", "Safe", "Uncertain").
+#         *   Tests verdicts with surrounding text.
+#         *   Tests error messages from `detect_scam` (e.g., "Error contacting AI model"), expecting "Uncertain (due to error or missing input)".
+#         *   Tests unrelated text, expecting "Uncertain".
+#     *   **`test_get_text_from_update`**:
+#         *   Uses `MagicMock` to create mock `Update` and `Message` objects.
+#         *   Tests various scenarios:
+#             *   Command with text (`/command some text`).
+#             *   Command with text and extra spaces.
+#             *   Command replying to a message.
+#             *   Command with no text and not a reply.
+#             *   `update.message` being `None`.
+#             *   `update` itself being `None`.
+#             *   Forwarded message text.
+#             *   Command with no text but replying to a message with no text.
+#             *   Command with text taking precedence over a replied-to message.
+# 
+# 3.  **`TestBotCommands(unittest.IsolatedAsyncioTestCase)`**:
+#     *   Uses `IsolatedAsyncioTestCase` for async command handlers.
+#     *   **`test_language_command_with_text`**:
+#         *   Mocks `identify_language` and `send_reply` (using `AsyncMock`).
+#         *   Creates mock `Update` and `Context` objects.
+#         *   Simulates a `/language Hello world` command.
+#         *   Asserts `identify_language` is called with "Hello world".
+#         *   Asserts `send_reply` is called with the expected formatted string "Detected Language: English (en)".
+#     *   **`test_language_command_no_text`**:
+#         *   Simulates `/language` with no text.
+#         *   Asserts `identify_language` is not called.
+#         *   Asserts `send_reply` is called with the prompt to provide text.
+#     *   **`test_language_command_detection_fails`**:
+#         *   Mocks `identify_language` to return `(None, None)`.
+#         *   Asserts `send_reply` is called with "Could not detect language."
 
-Here's a summary of what's included in `test_bot.py`:
-
-1.  **Setup**:
-    *   Imports `unittest`, `patch`, `MagicMock`, `AsyncMock` from `unittest.mock`.
-    *   Includes `sys.path.insert` to allow `from bot import ...` to work when running the test file, assuming `bot.py` is in the parent directory of `tests/`.
-    *   Imports the necessary functions (`identify_language`, `interpret_gemini_response`, `get_text_from_update`, `language_command`, `send_reply`) and `LangDetectException`.
-
-2.  **`TestBotFunctions(unittest.TestCase)`**:
-    *   **`test_identify_language`**:
-        *   Tests with English, Spanish, French text.
-        *   Tests with short/ambiguous text ("ok", "cv"), empty string, None, and numeric input, expecting `(None, None)`.
-        *   Includes a test for German.
-    *   **`test_identify_language_langdetect_exception`**:
-        *   Mocks `langdetect.detect` to raise `LangDetectException`.
-        *   Asserts that `identify_language` returns `(None, None)`.
-    *   **`test_interpret_gemini_response`**:
-        *   Tests exact valid verdicts ("Scam", "Likely Scam", "Safe", "Uncertain").
-        *   Tests verdicts with surrounding text.
-        *   Tests error messages from `detect_scam` (e.g., "Error contacting AI model"), expecting "Uncertain (due to error or missing input)".
-        *   Tests unrelated text, expecting "Uncertain".
-    *   **`test_get_text_from_update`**:
-        *   Uses `MagicMock` to create mock `Update` and `Message` objects.
-        *   Tests various scenarios:
-            *   Command with text (`/command some text`).
-            *   Command with text and extra spaces.
-            *   Command replying to a message.
-            *   Command with no text and not a reply.
-            *   `update.message` being `None`.
-            *   `update` itself being `None`.
-            *   Forwarded message text.
-            *   Command with no text but replying to a message with no text.
-            *   Command with text taking precedence over a replied-to message.
-
-3.  **`TestBotCommands(unittest.IsolatedAsyncioTestCase)`**:
-    *   Uses `IsolatedAsyncioTestCase` for async command handlers.
-    *   **`test_language_command_with_text`**:
-        *   Mocks `identify_language` and `send_reply` (using `AsyncMock`).
-        *   Creates mock `Update` and `Context` objects.
-        *   Simulates a `/language Hello world` command.
-        *   Asserts `identify_language` is called with "Hello world".
-        *   Asserts `send_reply` is called with the expected formatted string "Detected Language: English (en)".
-    *   **`test_language_command_no_text`**:
-        *   Simulates `/language` with no text.
-        *   Asserts `identify_language` is not called.
-        *   Asserts `send_reply` is called with the prompt to provide text.
-    *   **`test_language_command_detection_fails`**:
-        *   Mocks `identify_language` to return `(None, None)`.
-        *   Asserts `send_reply` is called with "Could not detect language."
-
-4.  **Running Tests**:
-    *   Includes an `if __name__ == '__main__': unittest.main()` block.
-    *   Extensive comments are added at the end of the file explaining various ways to run the tests and considerations about Python's import system and path manipulation, recommending `python -m unittest telegram_bot/tests/test_bot.py` from the project root for consistency with the current setup.
-
-I will now submit the report for this subtask.
+# ----------------------------
+# Additional Notes (ignored by test runner)
+#
+# 4.  **Running Tests**:
+#     *   Includes an `if __name__ == '__main__': unittest.main()` block.
+#     *   Extensive comments are added at the end of the file explaining various
+#         ways to run the tests and considerations about Python's import system
+#         and path manipulation. Run `python -m unittest telegram_bot/tests/test_bot.py`
+#         from the project root for consistency.
+#
+# This section originally included an explanatory summary of the test file.
